@@ -1,0 +1,73 @@
+version: '3'
+
+services:
+  dask-scheduler:
+    image: pramonettivega/dask-courselets:latest
+    environment:
+      - DASK_SCHEDULER_PORT=8786
+    ports:
+      - "8786:8786"
+      - "8787:8787"
+    command: >
+      /bin/bash -c "
+      pip install numpy==1.26.3 dask==2024.1.1 distributed==2024.1.1 lz4==4.3.3 msgpack==1.0.7 toolz==0.12.0 pandas==2.2.0 pyarrow==12.0.0 &&
+      dask-scheduler
+      "
+    networks:
+      - dask-net
+
+  dask-worker-1:
+    image: pramonettivega/dask-courselets:latest
+    depends_on:
+      - dask-scheduler
+    environment:
+      - DASK_DISTRIBUTED__WORKER__MEMORY__TARGET=0.60
+      - DASK_DISTRIBUTED__WORKER__MEMORY__SPILL=0.70
+      - DASK_DISTRIBUTED__WORKER__MEMORY__PAUSE=0.80
+      - DASK_DISTRIBUTED__WORKER__MEMORY__TERMINATE=0.95
+    command: >
+      /bin/bash -c "
+      pip install numpy==1.26.3 dask==2024.1.1 distributed==2024.1.1 lz4==4.3.3 msgpack==1.0.7 toolz==0.12.0 pandas==2.2.0 pyarrow==12.0.0 &&
+      dask-worker tcp://dask-scheduler:8786
+      "
+    networks:
+      - dask-net
+
+  dask-worker-2:
+    image: pramonettivega/dask-courselets:latest
+    depends_on:
+      - dask-scheduler
+    environment:
+      - DASK_DISTRIBUTED__WORKER__MEMORY__TARGET=0.60
+      - DASK_DISTRIBUTED__WORKER__MEMORY__SPILL=0.70
+      - DASK_DISTRIBUTED__WORKER__MEMORY__PAUSE=0.80
+      - DASK_DISTRIBUTED__WORKER__MEMORY__TERMINATE=0.95
+    command: >
+      /bin/bash -c "
+      pip install numpy==1.26.3 dask==2024.1.1 distributed==2024.1.1 lz4==4.3.3 msgpack==1.0.7 toolz==0.12.0 pandas==2.2.0 pyarrow==12.0.0 &&
+      dask-worker tcp://dask-scheduler:8786
+      "
+    networks:
+      - dask-net
+
+  jupyter:
+    image: pramonettivega/dask-eda-courselet
+    depends_on:
+      - dask-scheduler
+      - dask-worker-1
+      - dask-worker-2
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    command: >
+      /bin/bash -c "
+      pip install numpy==1.26.3 dask==2024.1.1 distributed==2024.1.1 lz4==4.3.3 msgpack==1.0.7 toolz==0.12.0 pandas==2.2.0 &&
+      start-notebook.sh --NotebookApp.token=''
+      "
+    networks:
+      - dask-net
+
+networks:
+  dask-net:
+    driver: bridge
